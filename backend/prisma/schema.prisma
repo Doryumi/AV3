@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Funcionario {
+  cpf            String   @id @db.VarChar(14)
+  nome           String   @db.VarChar(100)
+  usuario        String   @unique @db.VarChar(50)
+  senha          String   @db.VarChar(255)
+  nivelPermissao Int      @map("nivel_permissao")
+  etapas         EtapaFuncionario[]
+  testes         Teste[]
+  
+  @@map("funcionarios")
+}
+
+model Aeronave {
+  codigo     String   @id @db.VarChar(20)
+  modelo     String   @db.VarChar(100)
+  tipo       String   @db.VarChar(50)
+  capacidade Int
+  alcance    Int
+  pecas      Peca[]
+  etapas     Etapa[]
+  testes     Teste[]
+  relatorios Relatorio[]
+  
+  @@map("aeronaves")
+}
+
+model Peca {
+  id             Int      @id @default(autoincrement())
+  nome           String   @db.VarChar(100)
+  tipo           String   @db.VarChar(50)
+  fornecedor     String   @db.VarChar(100)
+  status         String   @db.VarChar(50)
+  codigoAeronave String   @map("codigo_aeronave") @db.VarChar(20)
+  aeronave       Aeronave @relation(fields: [codigoAeronave], references: [codigo], onDelete: Cascade)
+  
+  @@unique([nome, codigoAeronave])
+  @@index([codigoAeronave])
+  @@map("pecas")
+}
+
+model Etapa {
+  id             Int      @id @default(autoincrement())
+  nome           String   @db.VarChar(100)
+  prazo          DateTime @db.Date
+  status         String   @db.VarChar(50)
+  codigoAeronave String   @map("codigo_aeronave") @db.VarChar(20)
+  aeronave       Aeronave @relation(fields: [codigoAeronave], references: [codigo], onDelete: Cascade)
+  funcionarios   EtapaFuncionario[]
+  
+  @@unique([nome, codigoAeronave])
+  @@index([codigoAeronave])
+  @@map("etapas")
+}
+
+model EtapaFuncionario {
+  etapaId        Int          @map("etapa_id")
+  funcionarioCpf String       @map("funcionario_cpf") @db.VarChar(14)
+  etapa          Etapa        @relation(fields: [etapaId], references: [id], onDelete: Cascade)
+  funcionario    Funcionario  @relation(fields: [funcionarioCpf], references: [cpf], onDelete: Cascade)
+  
+  @@id([etapaId, funcionarioCpf])
+  @@index([funcionarioCpf])
+  @@map("etapas_funcionarios")
+}
+
+model Teste {
+  id             Int         @id @default(autoincrement())
+  tipo           String      @default("Elétrico") @db.VarChar(50)
+  descricao      String      @db.VarChar(255)
+  resultado      String      @db.VarChar(50)
+  data           DateTime    @db.Date
+  funcionarioCpf String      @map("funcionario_cpf") @db.VarChar(14)
+  codigoAeronave String      @map("codigo_aeronave") @db.VarChar(20)
+  funcionario    Funcionario @relation(fields: [funcionarioCpf], references: [cpf], onDelete: Cascade)
+  aeronave       Aeronave    @relation(fields: [codigoAeronave], references: [codigo], onDelete: Cascade)
+  
+  @@index([funcionarioCpf])
+  @@index([codigoAeronave])
+  @@map("testes")
+}
+
+model Relatorio {
+  id             Int      @id @default(autoincrement())
+  cliente        String   @db.VarChar(100)
+  dataEntrega    DateTime @map("data_entrega") @db.Date
+  codigoAeronave String   @map("codigo_aeronave") @db.VarChar(20)
+  conteudo       String   @db.Text
+  dataGeracao    DateTime @default(now()) @map("data_geracao")
+  aeronave       Aeronave @relation(fields: [codigoAeronave], references: [codigo], onDelete: Cascade)
+  
+  @@map("relatorios")
+}
+
+model Metric {
+  id              Int      @id @default(autoincrement())
+  endpoint        String   @db.VarChar(100)
+  method          String   @db.VarChar(10)
+  statusCode      Int      @map("status_code")
+  latency         Float    @db.Float
+  responseTime    Float    @map("response_time") @db.Float
+  processingTime  Float    @map("processing_time") @db.Float
+  timestamp       DateTime @default(now())
+  userCount       Int      @default(1) @map("user_count")
+  
+  @@index([endpoint, timestamp])
+  @@map("metrics")
+}
